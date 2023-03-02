@@ -1,3 +1,4 @@
+use core::hash::{Hash, Hasher};
 use esp_idf_sys::*;
 
 /// Bluetooth Device address type
@@ -8,9 +9,24 @@ pub enum BLEAddressType {
   RandomID = BLE_ADDR_RANDOM_ID as _,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 pub struct BLEAddress {
   pub(crate) value: esp_idf_sys::ble_addr_t,
+}
+
+impl PartialEq for BLEAddress {
+  fn eq(&self, other: &Self) -> bool {
+    self.value.val == other.value.val && self.value.type_ == other.value.type_
+  }
+}
+
+impl Eq for BLEAddress {}
+
+impl Hash for BLEAddress {
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    self.value.val.hash(state);
+    self.value.type_.hash(state);
+  }
 }
 
 impl BLEAddress {
@@ -19,6 +35,17 @@ impl BLEAddress {
       value: esp_idf_sys::ble_addr_t {
         val,
         type_: addr_type as _,
+      },
+    };
+    ret.value.val.reverse();
+    ret
+  }
+
+  pub fn new_from_addr(val: [u8; 6]) -> Self {
+    let mut ret = Self {
+      value: esp_idf_sys::ble_addr_t {
+        val,
+        type_: BLEAddressType::Public as _,
       },
     };
     ret.value.val.reverse();
